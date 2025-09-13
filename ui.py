@@ -26,12 +26,31 @@ class App(ctk.CTk):
         self.frame.grid(row = 0, column=0, columnspan=2, sticky="nsew", padx=10, pady=10) 
         
         # Elementos del frame superior
-        self.input = ctk.CTkEntry(self.frame)
-        self.input.pack(pady=10)
-
-        self.button = ctk.CTkButton(self.frame, text="Graficar", command=lambda: self.comprobarErrores(self.input.get()))
-        self.button.pack(pady=10)
         
+        # Elementos para la funcion
+        self.frame_funcion = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.frame_funcion.grid(row=0, column=0, sticky="nsew", padx=15, pady=15)
+        self.label_funcion = ctk.CTkLabel(self.frame_funcion, text="Funcion f(x):", font=ctk.CTkFont(size=14, weight="bold"))
+        self.label_funcion.pack(side="left", padx=(0, 5))
+        self.input = ctk.CTkEntry(self.frame_funcion, width=700)
+        self.input.pack (expand=True, pady=10)
+
+        # Elementos para evaluar
+        self.frame_evaluar = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.frame_evaluar.grid(row=1, column=0, sticky="nsew", padx=15, pady=15)
+        self.label_evaluar = ctk.CTkLabel(self.frame_evaluar, text="Evaluar en x =", font=ctk.CTkFont(size=14, weight="bold"))
+        self.label_evaluar.pack(side="left", padx=(0, 5))
+        self.input_evaluar = ctk.CTkEntry(self.frame_evaluar, width=700)
+        self.input_evaluar.pack(expand=True, pady=10)
+
+        # Botones
+        self.frame_boton = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.frame_boton.grid(row=0, column=1, rowspan=2, sticky="", padx=5, pady=5)
+        self.button_funcion = ctk.CTkButton(self.frame_boton, text="Calcular", width=200, height=40, command=lambda: self.comprobarErrores(self.input.get()))
+        self.button_funcion.pack(expand=True, pady=10)
+        self.button_evaluar = ctk.CTkButton(self.frame_boton, text="Evaluar", width=200, height=40)
+        self.button_evaluar.pack(expand=True, pady=10)
+
         # Elementos para el analisis
         self.frame_analisis = ctk.CTkFrame(self)
         self.frame_analisis.grid(row=1, column=0, sticky="nsew", padx=(10,5), pady=(0,10))
@@ -103,6 +122,23 @@ class App(ctk.CTk):
         except Exception as e:
             messagebox.showerror("Error en la función:", f"No se pudo crear la función: {e}")
             return None
+    
+    
+    # --------------------------------------------------------------
+    # ------------- Comprueba errores en evaluar -------------------
+    # --------------------------------------------------------------
+    def erroresEvaluar(self, texto_evaluar):
+        if texto_evaluar.strip() == "": # Verificar si el campo de evaluar esta vacio
+            messagebox.showerror("Error al evaluar:", "El campo de evaluar no puede estar vacío.") 
+            return None
+        
+        try:
+            valor_evaluar = float(texto_evaluar) # Convertir el texto a un numero
+            return valor_evaluar
+        except ValueError:
+            messagebox.showerror("Error al evaluar:", "El valor a evaluar debe ser un número real.")
+            return None
+        
     
     # --------------------------------------------------------------
     # ------------- Mostrar analisis en la interfaz ---------------
