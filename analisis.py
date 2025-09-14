@@ -18,7 +18,7 @@ _local_dict = {
 
 def convertir_expresion(texto_funcion):
     texto = texto_funcion.strip()
-    texto = texto.replace('^', '*').replace(',', '.')
+    texto = texto.replace('^', '**').replace(',', '.')
     texto = re.sub(r'\|([^|]+)\|', r'Abs(\1)', texto)
     try:
         expr = parse_expr(texto, transformations = transformaciones_parser, local_dict = _local_dict)          
@@ -211,3 +211,4 @@ def evaluar_en_punto(expresion_simbolica, valor):
         pasos.append(f"No se pudo evaluar numéricamente: {e}")
         resultado_num = float('nan')
     return resultado_num, "\n".join(pasos)
+
