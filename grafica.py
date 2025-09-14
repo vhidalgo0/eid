@@ -7,7 +7,7 @@ import sympy as sp
 def graficarFuncion(self, funcion_numerica, expresion_simbolica):
     # Calcular valores
     valores_y = calcularFuncion(funcion_numerica)
-    valores_x = list(range(-10, 11))
+    valores_x = [i/20 for i in range(-100, 101)] # Rango de x de -10 a 10 con paso 0.05
     
     # Limpiar y graficar
     self.ax.clear()
@@ -37,4 +37,5 @@ def graficarFuncion(self, funcion_numerica, expresion_simbolica):
     self.ax.axvline(0, color='black', linewidth=0.8)
     self.ax.legend()
     # Actualizar canvas
+
     self.canvas.draw()
