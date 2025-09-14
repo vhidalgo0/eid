@@ -141,9 +141,9 @@ def calcularIntersecciones(expresion_simbolica):
 # --------------------------------------------------------------
 def calcularFuncion(funcion_numerica):
     valores_y = [] # Lista de valores de y
-    for i in range(-10, 11): # Evaluar en el rango -10 a 10
+    for i in range(-100, 101): # Evaluar en el rango -10 a 10
         try:
-            valores_y.append(funcion_numerica(i))
+            valores_y.append(funcion_numerica(i/20))   
         except (ZeroDivisionError, ValueError, OverflowError): # Manejo de errores
             valores_y.append(float('NaN'))
     return valores_y
@@ -211,4 +211,5 @@ def evaluar_en_punto(expresion_simbolica, valor):
         pasos.append(f"No se pudo evaluar numéricamente: {e}")
         resultado_num = float('nan')
     return resultado_num, "\n".join(pasos)
+
 
