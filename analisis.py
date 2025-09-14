@@ -29,34 +29,33 @@ def convertir_expresion(texto_funcion):
     return expr
 
 # --------------------------------------------------------------
-# ------------- Calcular recorrido aproximado ------------------
+# ------------- Calcular recorrido -----------------------------
 # --------------------------------------------------------------
-def calcularRecorrido(expresion_simbolica):
-    #intentar detectar crecimiento a infinito por limites
+def calcularRecorrido(expresion_simbolica, dominio=None):
+    # Intentar primero function_range simbólico
     try:
-        lim_pos = sp.limit(expresion_simbolica, x, sp.oo)
-        lim_neg = sp.limit(expresion_simbolica, x, -sp.oo)
-        if lim_pos in (sp.oo, -sp.oo, sp.zoo) or lim_neg in (sp.oo, -sp.oo, sp.zoo):
-            return "No acotado (tendencia a infinito en +∞ o -∞)"
+        r = sp.calculus.util.function_range(expresion_simbolica, x, dominio if dominio else sp.S.Reals)
+        return f"Recorrido exacto: {sp.pretty(r)}"
     except Exception:
         pass
+    # Aproximación numérica
     try:
         fn = sp.lambdify(x, expresion_simbolica, 'math')
     except Exception:
-        return "No se pude determinar"
+        return "No se pudo determinar"
     valores_y = []
-    for i in range(-100, 101):
+    for i in range(-200, 201):  # Extender a [-20, 20] para mejor aproximación
         xv = i/10
-        try: 
+        try:
             y_val = fn(xv)
             if isinstance(y_val, (int, float)) and math.isfinite(y_val) and abs(y_val) < 1e6:
                 valores_y.append(float(y_val))
         except Exception:
             continue
-
     if valores_y:
-        return f"Aproximadamente [{min(valores_y):.2f}, {max(valores_y):.2f}] (muestra en [-10, 10])"
+        return f"Aproximado en [-20,20]: [{min(valores_y):.2f}, {max(valores_y):.2f}]"
     return "No se pudo determinar"
+
 # --------------------------------------------------------------
 # ------------- Buscar intersecciones numéricamente -----------
 # --------------------------------------------------------------
@@ -77,28 +76,30 @@ def _biseccion(fn, a, b, tol=1e-6, maxiter=50):
             a, fa = m, fm
     return (a + b) / 2.0
     
-def buscar_intersecciones_numericas(expresion_simbolica):
+def buscar_intersecciones_numericas(expresion_simbolica, rango=(-10, 10), step=0.1):
     try:
         fn = sp.lambdify(x, expresion_simbolica, 'math')
     except Exception:
         return []
     posibles = []
-    step = 0.1
-    for i in range(-100, 100):
-        a = i * step
-        b = a + step
+    a0, b0 = rango
+    i = a0
+    while i < b0:
+        a, b = i, i + step
         try:
             fa, fb = fn(a), fn(b)
             if not (math.isfinite(fa) and math.isfinite(fb)):
+                i += step
                 continue
             if fa * fb < 0:
                 try:
                     raiz = _biseccion(fn, a, b)
                     posibles.append(raiz)
                 except Exception:
-                    posibles.append((a+b)/2.0)
+                    posibles.append((a + b) / 2.0)
         except Exception:
-            continue
+            pass
+        i += step
     # eliminar duplicados cercanos
     finales = []
     for r in posibles:
@@ -134,19 +135,7 @@ def calcularIntersecciones(expresion_simbolica):
     except Exception:
         xi = buscar_intersecciones_numericas(expresion_simbolica)
 
-    return xi, y0
-
-# --------------------------------------------------------------
-# ------------- Calcula los valores de la funcion --------------
-# --------------------------------------------------------------
-def calcularFuncion(funcion_numerica):
-    valores_y = [] # Lista de valores de y
-    for i in range(-100, 101): # Evaluar en el rango -10 a 10
-        try:
-            valores_y.append(funcion_numerica(i/20))   
-        except (ZeroDivisionError, ValueError, OverflowError): # Manejo de errores
-            valores_y.append(float('NaN'))
-    return valores_y
+    return [round(r, 5) for r in xi], y0
 
 # --------------------------------------------------------------
 # ------------- Determinar dominio -----------------------------
@@ -155,7 +144,16 @@ def determinarDominio(expresion_simbolica):
     pasos = []
     dominio = sp.S.Reals
 
-    # 1) denominador != 0
+    # 1) discontinuidades / singularidades
+    try:
+        sing = sp.calculus.util.singularities(expresion_simbolica, x)
+        if sing:
+            pasos.append(f"Excluir {sing} por ser puntos de discontinuidad.")
+            dominio = sp.Complement(dominio, sing)
+    except Exception:
+        pasos.append("No se pudo determinar singularidades exactamente.")
+
+    # 2) denominador != 0
     den = sp.denom(expresion_simbolica)
     if den != 1:
         try:
@@ -165,7 +163,7 @@ def determinarDominio(expresion_simbolica):
         except Exception:
             pasos.append(f"No se pudo resolver denominador {den} exactamente.")
 
-    # 2) potencias con exponente racional de denominador par -> base >= 0
+    # 3) restricciones de potencias pares, sqrt, log
     for pot in expresion_simbolica.atoms(sp.Pow):
         base, exp = pot.as_base_exp()
         if exp.is_Rational and exp.q % 2 == 0:
@@ -176,7 +174,6 @@ def determinarDominio(expresion_simbolica):
             except Exception:
                 pass
 
-    # 3) sqrt(...) y log(...)
     for s in expresion_simbolica.atoms(sp.Function):
         if isinstance(s, sp.log):
             arg = s.args[0]
@@ -197,19 +194,22 @@ def determinarDominio(expresion_simbolica):
 
     if not pasos:
         pasos.append("La función se puede usar en todos los reales.")
-    return dominio, "\n".join(pasos)
+    return dominio, "\n".join(f"{i+1}) {p}" for i, p in enumerate(pasos))
 
+# --------------------------------------------------------------
+# ------------- Evaluación paso a paso -------------------------
+# --------------------------------------------------------------
 def evaluar_en_punto(expresion_simbolica, valor):
     pasos = []
-    pasos.append(f"Función: f(x) = {sp.srepr(expresion_simbolica)}")
-    pasos.append(f"Sustituimos x = {valor}: f({valor}) = {expresion_simbolica.subs(x, valor)}")
+    pasos.append(f"1) Función: f(x) = {sp.pretty(expresion_simbolica)}")
+    pasos.append(f"2) Sustituimos x = {valor}: {sp.pretty(expresion_simbolica.subs(x, valor))}")
     try:
         resultado_simpl = sp.simplify(expresion_simbolica.subs(x, valor))
         resultado_num = float(sp.N(resultado_simpl))
-        pasos.append(f"Simplificando y evaluando numéricamente: f({valor}) = {resultado_num}")
+        pasos.append(f"3) Simplificando: {sp.pretty(resultado_simpl)}")
+        pasos.append(f"4) Evaluación numérica: f({valor}) ≈ {resultado_num}")
     except Exception as e:
         pasos.append(f"No se pudo evaluar numéricamente: {e}")
         resultado_num = float('nan')
     return resultado_num, "\n".join(pasos)
-
 
