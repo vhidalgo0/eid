@@ -214,3 +214,4 @@ def evaluar_en_punto(expresion_simbolica, valor):
     return resultado_num, "\n".join(pasos)
 
 
+
