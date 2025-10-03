@@ -213,3 +213,4 @@ def evaluar_en_punto(expresion_simbolica, valor):
         resultado_num = float('nan')
     return resultado_num, "\n".join(pasos)
 
+
